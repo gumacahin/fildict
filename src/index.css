@@ -25,8 +25,6 @@ a:hover {
 body {
   margin: 0;
   display: flex;
-  /* place-items: center; */
-  min-width: 320px;
   min-height: 100vh;
 }
 
@@ -113,4 +111,23 @@ button:focus-visible {
 
 .word .sense > div {
   display: inline;
+}
+
+.ais-InfiniteHits-loadMore--disabled {
+  display: none;
+}
+
+.word h4 {
+  margin: 0;
+}
+
+@media (prefers-color-scheme: dark) {
+  .ais-Hits-item,
+  .ais-InfiniteHits-item,
+  .ais-FrequentlyBoughtTogether-item,
+  .ais-LookingSimilar-item,
+  .ais-RelatedProducts-item,
+  .ais-TrendingItems-item {
+    background: #333; /* Or any dark theme appropriate color */
+  }
 }
