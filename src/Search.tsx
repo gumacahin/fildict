@@ -1,14 +1,25 @@
+import { useRef, useCallback } from "react";
 import algoliasearch from "algoliasearch/lite";
 import "instantsearch.css/themes/satellite.css";
 import { useInstantSearch, InstantSearch, SearchBox, Configure, InfiniteHits, } from "react-instantsearch";
 
 import { Hit } from "./Hit";
 
-const searchClient = algoliasearch("REDACTED_APP_ID", "REDACTED_SEARCH_KEY");
+const searchClient = algoliasearch(
+  import.meta.env.VITE_ALGOLIA_APP_ID,
+  import.meta.env.VITE_ALGOLIA_SEARCH_KEY,
+);
 
 const query = decodeURIComponent(window.location.href).match(/\/salita\/([^#]+)/)?.[1] || '';
 
 export const Search = () => {
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const queryHook = useCallback((query: string, search: (value: string) => void) => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => search(query), 300);
+  }, []);
+
   return (
     <InstantSearch
       searchClient={searchClient}
@@ -19,11 +30,11 @@ export const Search = () => {
         },
       }}
     >
-      <Configure hitsPerPage={100} />
+      <Configure hitsPerPage={20} />
       <div className="ais-InstantSearch">
-        <SearchBox placeholder='Hanapin sa Diksiyonaryong Filipino' />
+        <SearchBox placeholder='Hanapin sa Diksiyonaryong Filipino' queryHook={queryHook} />
         <NoResultsBoundary fallback={<NoResults />}>
-          <InfiniteHits hitComponent={Hit} showPrevious={false} />
+          <InfiniteHits hitComponent={Hit} showPrevious={false} translations={{ showMoreButtonText: "Higit pa" }} />
         </NoResultsBoundary>
       </div>
     </InstantSearch>
