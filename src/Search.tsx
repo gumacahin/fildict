@@ -5,10 +5,13 @@ import { useInstantSearch, InstantSearch, SearchBox, Configure, InfiniteHits, } 
 
 import { Hit } from "./Hit";
 
-const searchClient = algoliasearch(
-  import.meta.env.VITE_ALGOLIA_APP_ID,
-  import.meta.env.VITE_ALGOLIA_SEARCH_KEY,
-);
+const appId = (import.meta.env.VITE_ALGOLIA_APP_ID ?? "").trim();
+const searchKey = (import.meta.env.VITE_ALGOLIA_SEARCH_KEY ?? "").trim();
+const missingEnvVars = [
+  !appId ? "VITE_ALGOLIA_APP_ID" : null,
+  !searchKey ? "VITE_ALGOLIA_SEARCH_KEY" : null,
+].filter((value): value is string => Boolean(value));
+const searchClient = missingEnvVars.length === 0 ? algoliasearch(appId, searchKey) : null;
 
 const query = decodeURIComponent(window.location.href).match(/\/salita\/([^#]+)/)?.[1] || '';
 
@@ -19,6 +22,17 @@ export const Search = () => {
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => search(query), 300);
   }, []);
+
+  if (!searchClient) {
+    return (
+      <div>
+        <p>Hindi ma-load ang paghahanap dahil kulang ang Algolia configuration.</p>
+        <p>
+          Required env vars: <code>{missingEnvVars.join(", ")}</code>
+        </p>
+      </div>
+    );
+  }
 
   return (
     <InstantSearch

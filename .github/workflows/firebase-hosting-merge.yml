@@ -11,6 +11,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Validate Algolia secrets
+        run: |
+          if [ -z "$VITE_ALGOLIA_APP_ID" ] || [ -z "$VITE_ALGOLIA_SEARCH_KEY" ]; then
+            echo "Missing Algolia secrets. Set VITE_ALGOLIA_APP_ID and VITE_ALGOLIA_SEARCH_KEY in GitHub repository secrets."
+            exit 1
+          fi
+        env:
+          VITE_ALGOLIA_APP_ID: ${{ secrets.VITE_ALGOLIA_APP_ID }}
+          VITE_ALGOLIA_SEARCH_KEY: ${{ secrets.VITE_ALGOLIA_SEARCH_KEY }}
       - run: npm ci && npm run build
         env:
           VITE_ALGOLIA_APP_ID: ${{ secrets.VITE_ALGOLIA_APP_ID }}
