@@ -6,7 +6,7 @@ import { useInstantSearch, InstantSearch, SearchBox, Configure, InfiniteHits, } 
 import { Hit } from "./Hit";
 
 const appId = "D3FGLXXB5K";
-const searchKey = "5c53005d8242ec8d86e078f98ad6f8e0";
+const searchKey = "897a74e439cc95b66f95fae71cf1ca17";
 const baseSearchClient = algoliasearch(appId, searchKey);
 const MIN_QUERY_LENGTH = 2;
 const HITS_PER_PAGE = 20;
