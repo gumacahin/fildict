@@ -73,6 +73,6 @@ jobs:
           FIREBASE_SERVICE_ACCOUNT_FILDICT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_FILDICT }}
           FIREBASE_SERVICE_ACCOUNT_DIKSIYONARYO: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_DIKSIYONARYO }}
       - name: Deploy PR preview channel
-        run: npx firebase-tools hosting:channel:deploy "pr-${{ github.event.pull_request.number }}" --project fildict --expires 7d --non-interactive
+        run: npx firebase-tools hosting:channel:deploy "pr-${{ github.event.pull_request.number }}" --project diksiyonaryo --expires 7d --non-interactive
         env:
           FIREBASE_TOKEN: ${{ steps.auth_mode.outputs.mode == 'firebase_token' && secrets.FIREBASE_TOKEN || '' }}
