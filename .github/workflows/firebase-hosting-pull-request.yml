@@ -20,23 +20,59 @@ jobs:
             echo "Missing Algolia secrets. Set VITE_ALGOLIA_APP_ID and VITE_ALGOLIA_SEARCH_KEY in GitHub repository secrets."
             exit 1
           fi
-          if [ -z "$GCP_WIF_PROVIDER" ] || [ -z "$GCP_SERVICE_ACCOUNT" ]; then
-            echo "Missing OIDC config. Set GCP_WIF_PROVIDER and GCP_SERVICE_ACCOUNT as repository variables or secrets."
-            exit 1
-          fi
         env:
           VITE_ALGOLIA_APP_ID: ${{ secrets.VITE_ALGOLIA_APP_ID }}
           VITE_ALGOLIA_SEARCH_KEY: ${{ secrets.VITE_ALGOLIA_SEARCH_KEY }}
+      - name: Select deploy authentication mode
+        id: auth_mode
+        run: |
+          if [ -n "$GCP_WIF_PROVIDER" ] && [ -n "$GCP_SERVICE_ACCOUNT" ]; then
+            echo "mode=oidc" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ -n "$FIREBASE_SERVICE_ACCOUNT_FILDICT" ] || [ -n "$FIREBASE_SERVICE_ACCOUNT_DIKSIYONARYO" ]; then
+            echo "mode=service_account_json" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ -n "$FIREBASE_TOKEN" ]; then
+            echo "mode=firebase_token" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "No Firebase deploy auth found. Configure one of:"
+          echo "1) OIDC: GCP_WIF_PROVIDER + GCP_SERVICE_ACCOUNT (vars or secrets)"
+          echo "2) Service account JSON secret: FIREBASE_SERVICE_ACCOUNT_FILDICT or FIREBASE_SERVICE_ACCOUNT_DIKSIYONARYO"
+          echo "3) FIREBASE_TOKEN secret"
+          exit 1
+        env:
           GCP_WIF_PROVIDER: ${{ vars.GCP_WIF_PROVIDER || secrets.GCP_WIF_PROVIDER }}
           GCP_SERVICE_ACCOUNT: ${{ vars.GCP_SERVICE_ACCOUNT || secrets.GCP_SERVICE_ACCOUNT }}
+          FIREBASE_SERVICE_ACCOUNT_FILDICT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_FILDICT }}
+          FIREBASE_SERVICE_ACCOUNT_DIKSIYONARYO: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_DIKSIYONARYO }}
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
       - run: npm ci && npm run build
         env:
           VITE_ALGOLIA_APP_ID: ${{ secrets.VITE_ALGOLIA_APP_ID }}
           VITE_ALGOLIA_SEARCH_KEY: ${{ secrets.VITE_ALGOLIA_SEARCH_KEY }}
       - name: Authenticate to Google Cloud (OIDC)
+        if: ${{ steps.auth_mode.outputs.mode == 'oidc' }}
         uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER || secrets.GCP_WIF_PROVIDER }}
           service_account: ${{ vars.GCP_SERVICE_ACCOUNT || secrets.GCP_SERVICE_ACCOUNT }}
+      - name: Authenticate using Firebase service account JSON secret
+        if: ${{ steps.auth_mode.outputs.mode == 'service_account_json' }}
+        run: |
+          SA_JSON="$FIREBASE_SERVICE_ACCOUNT_FILDICT"
+          if [ -z "$SA_JSON" ]; then
+            SA_JSON="$FIREBASE_SERVICE_ACCOUNT_DIKSIYONARYO"
+          fi
+          CREDS_FILE="$RUNNER_TEMP/gcp-sa.json"
+          printf '%s' "$SA_JSON" > "$CREDS_FILE"
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$CREDS_FILE" >> "$GITHUB_ENV"
+        env:
+          FIREBASE_SERVICE_ACCOUNT_FILDICT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_FILDICT }}
+          FIREBASE_SERVICE_ACCOUNT_DIKSIYONARYO: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_DIKSIYONARYO }}
       - name: Deploy PR preview channel
         run: npx firebase-tools hosting:channel:deploy "pr-${{ github.event.pull_request.number }}" --project fildict --expires 7d --non-interactive
+        env:
+          FIREBASE_TOKEN: ${{ steps.auth_mode.outputs.mode == 'firebase_token' && secrets.FIREBASE_TOKEN || '' }}
