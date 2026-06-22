@@ -6,6 +6,9 @@ on:
   push:
     branches:
       - main
+permissions:
+  contents: read
+  id-token: write
 jobs:
   build_and_deploy:
     runs-on: ubuntu-latest
@@ -17,16 +20,23 @@ jobs:
             echo "Missing Algolia secrets. Set VITE_ALGOLIA_APP_ID and VITE_ALGOLIA_SEARCH_KEY in GitHub repository secrets."
             exit 1
           fi
+          if [ -z "$GCP_WIF_PROVIDER" ] || [ -z "$GCP_SERVICE_ACCOUNT" ]; then
+            echo "Missing OIDC config. Set repository variables GCP_WIF_PROVIDER and GCP_SERVICE_ACCOUNT."
+            exit 1
+          fi
         env:
           VITE_ALGOLIA_APP_ID: ${{ secrets.VITE_ALGOLIA_APP_ID }}
           VITE_ALGOLIA_SEARCH_KEY: ${{ secrets.VITE_ALGOLIA_SEARCH_KEY }}
+          GCP_WIF_PROVIDER: ${{ vars.GCP_WIF_PROVIDER }}
+          GCP_SERVICE_ACCOUNT: ${{ vars.GCP_SERVICE_ACCOUNT }}
       - run: npm ci && npm run build
         env:
           VITE_ALGOLIA_APP_ID: ${{ secrets.VITE_ALGOLIA_APP_ID }}
           VITE_ALGOLIA_SEARCH_KEY: ${{ secrets.VITE_ALGOLIA_SEARCH_KEY }}
-      - uses: FirebaseExtended/action-hosting-deploy@v0
+      - name: Authenticate to Google Cloud (OIDC)
+        uses: google-github-actions/auth@v2
         with:
-          repoToken: ${{ secrets.GITHUB_TOKEN }}
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_FILDICT }}
-          channelId: live
-          projectId: fildict
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+      - name: Deploy to Firebase Hosting (live)
+        run: npx firebase-tools deploy --only hosting --project fildict --non-interactive
