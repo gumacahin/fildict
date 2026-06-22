@@ -21,14 +21,14 @@ jobs:
             exit 1
           fi
           if [ -z "$GCP_WIF_PROVIDER" ] || [ -z "$GCP_SERVICE_ACCOUNT" ]; then
-            echo "Missing OIDC config. Set repository variables GCP_WIF_PROVIDER and GCP_SERVICE_ACCOUNT."
+            echo "Missing OIDC config. Set GCP_WIF_PROVIDER and GCP_SERVICE_ACCOUNT as repository variables or secrets."
             exit 1
           fi
         env:
           VITE_ALGOLIA_APP_ID: ${{ secrets.VITE_ALGOLIA_APP_ID }}
           VITE_ALGOLIA_SEARCH_KEY: ${{ secrets.VITE_ALGOLIA_SEARCH_KEY }}
-          GCP_WIF_PROVIDER: ${{ vars.GCP_WIF_PROVIDER }}
-          GCP_SERVICE_ACCOUNT: ${{ vars.GCP_SERVICE_ACCOUNT }}
+          GCP_WIF_PROVIDER: ${{ vars.GCP_WIF_PROVIDER || secrets.GCP_WIF_PROVIDER }}
+          GCP_SERVICE_ACCOUNT: ${{ vars.GCP_SERVICE_ACCOUNT || secrets.GCP_SERVICE_ACCOUNT }}
       - run: npm ci && npm run build
         env:
           VITE_ALGOLIA_APP_ID: ${{ secrets.VITE_ALGOLIA_APP_ID }}
@@ -36,7 +36,7 @@ jobs:
       - name: Authenticate to Google Cloud (OIDC)
         uses: google-github-actions/auth@v2
         with:
-          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
-          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER || secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT || secrets.GCP_SERVICE_ACCOUNT }}
       - name: Deploy to Firebase Hosting (live)
         run: npx firebase-tools deploy --only hosting --project fildict --non-interactive
